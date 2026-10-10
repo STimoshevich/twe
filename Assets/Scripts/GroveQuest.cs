@@ -16,12 +16,14 @@ namespace TwilightGrove
         bool delivered, confirmReset;
         string message;
         float messageUntil;
+        float visibilityRadius;
         int nearby = -1;
         bool nearShrine;
 
-        public void Initialize(Transform target, Transform altarCrystal, Light light)
+        public void Initialize(Transform target, Transform altarCrystal, Light light, float sightRadius)
         {
             player = target; shrine = altarCrystal; shrineLight = light;
+            visibilityRadius = sightRadius;
             int state = PlayerPrefs.GetInt(SaveKey, 0);
             collected = state & All;
             delivered = (state & 32) != 0 && collected == All;
@@ -59,7 +61,7 @@ namespace TwilightGrove
                 float distance = Vector2.Distance(new Vector2(player.position.x, player.position.z),
                     new Vector2(locations[i].x, locations[i].z));
                 // A collectible is current activity, not permanent geographic information.
-                crystals[i].SetActive(available && distance < 5.8f);
+                crystals[i].SetActive(available && distance < visibilityRadius);
                 if (available && distance < nearest && !Physics.Linecast(origin, locations[i]))
                 { nearby = i; nearest = distance; }
             }

@@ -70,7 +70,7 @@ namespace TwilightGrove
             var style = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height / 35f, 14, 26)) };
             var safe = Screen.safeArea;
             GUI.Label(new Rect(safe.xMin + 18, Screen.height - safe.yMax + 15, safe.width - 36, 80),
-                "TWILIGHT GROVE\nWASD / arrows / joystick · Explore the shrine and ruins", style);
+                "СТАРЫЙ ЛЕС\nWASD / стрелки / джойстик · Исследуй лес и руины", style);
         }
         void DrawCircle(Vector2 position, float r, Color color)
         {

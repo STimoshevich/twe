@@ -9,10 +9,13 @@ namespace TwilightGrove
         public Transform player;
         public Light shrineLight;
         public string characterId = "local-hero-001";
-        public float sightRadius = 6f;
+        public float sightRadius = 12f;
+        public float sightFeather = 4f;
         const int Cells = 96;
         const float Min = -24f, Size = 48f;
         byte[] explored = new byte[Cells * Cells];
+        readonly float[] softCoverage = new float[Cells * Cells];
+        static readonly int[] BlurWeights = { 1, 4, 6, 4, 1 };
         Color32[] maskPixels = new Color32[Cells * Cells];
         Color32[] mapPixels = new Color32[Cells * Cells];
         Texture2D mask, map;
@@ -26,7 +29,8 @@ namespace TwilightGrove
             shrineLight = light;
             mask = new Texture2D(Cells, Cells, TextureFormat.RGBA32, false);
             map = new Texture2D(Cells, Cells, TextureFormat.RGBA32, false);
-            mask.filterMode = map.filterMode = FilterMode.Point;
+            mask.filterMode = FilterMode.Bilinear;
+            map.filterMode = FilterMode.Point;
             mask.wrapMode = map.wrapMode = TextureWrapMode.Clamp;
             Load();
             Shader.SetGlobalTexture("_GroveExplored", mask);
@@ -58,7 +62,7 @@ namespace TwilightGrove
         void LateUpdate()
         {
             if (player == null || mask == null) return;
-            Shader.SetGlobalVector("_GroveViewer", new Vector4(player.position.x, player.position.z, sightRadius, 0));
+            Shader.SetGlobalVector("_GroveViewer", new Vector4(player.position.x, player.position.z, sightRadius, Mathf.Clamp(sightFeather, .1f, sightRadius)));
             if (shrineLight != null)
                 shrineLight.enabled = Vector2.Distance(new Vector2(player.position.x, player.position.z), new Vector2(5,5)) < sightRadius;
             if (Time.unscaledTime >= nextUpdate) { Refresh(); nextUpdate = Time.unscaledTime + .1f; }
@@ -71,30 +75,43 @@ namespace TwilightGrove
             {
                 int i = z * Cells + x;
                 var point = new Vector2(Min + (x + .5f) * Size / Cells, Min + (z + .5f) * Size / Cells);
-                bool visible = Vector2.Distance(point, position) <= sightRadius;
+                float distance = Vector2.Distance(point, position);
+                bool visible = distance <= sightRadius;
                 if (visible && explored[i] == 0) { explored[i] = 1; dirty = true; }
                 byte known = explored[i] == 0 ? (byte)0 : (byte)255;
                 maskPixels[i] = new Color32(known, known, known, 255);
                 Color terrain = TerrainColor(point);
-                mapPixels[i] = explored[i] == 0 ? new Color(.018f,.025f,.04f) : terrain * (visible ? 1 : .45f);
+                mapPixels[i] = explored[i] == 0 ? new Color(.018f,.025f,.04f) : terrain * Mathf.Lerp(.45f, 1f, 1f - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(sightRadius - Mathf.Clamp(sightFeather, .1f, sightRadius), sightRadius, distance)));
                 mapPixels[i].a = 255;
             }
+            SoftenExploredEdge();
             mask.SetPixels32(maskPixels); mask.Apply(false);
             map.SetPixels32(mapPixels); map.Apply(false);
+        }
+        // Blur the display mask only. Persistent cells and event visibility stay unchanged.
+        void SoftenExploredEdge()
+        {
+            for(int z=0;z<Cells;z++) for(int x=0;x<Cells;x++)
+            {
+                float sum=0;
+                for(int k=-2;k<=2;k++)
+                    sum+=(explored[z*Cells+Mathf.Clamp(x+k,0,Cells-1)] != 0 ? 1f : 0f)*BlurWeights[k+2];
+                softCoverage[z*Cells+x]=sum/16f;
+            }
+            for(int z=0;z<Cells;z++) for(int x=0;x<Cells;x++)
+            {
+                float sum=0;
+                for(int k=-2;k<=2;k++) sum+=softCoverage[Mathf.Clamp(z+k,0,Cells-1)*Cells+x]*BlurWeights[k+2];
+                byte value=(byte)Mathf.RoundToInt(sum*255f/16f);
+                maskPixels[z*Cells+x]=new Color32(value,value,value,255);
+            }
         }
         static Color TerrainColor(Vector2 p)
         {
             if (Mathf.Abs(p.x) > 22.5f || Mathf.Abs(p.y) > 22.5f) return new Color(.5f,.52f,.6f);
             if (p.x > 3.5f && p.x < 6.5f && p.y > 3.5f && p.y < 6.5f) return Color.cyan;
-            if ((p.x > -9.3f && p.x < -2.7f && Mathf.Abs(p.y - 6) < .5f) ||
-                (Mathf.Abs(p.x + 9) < .5f && p.y > 1 && p.y < 6) ||
-                (Mathf.Abs(p.y - 19) < .5f && p.x > -18 && p.x < -10) ||
-                (Mathf.Abs(p.x + 18) < .5f && p.y > 15 && p.y < 19)) return new Color(.65f,.65f,.7f);
-            if (Mathf.Abs(p.x) < 1.5f || (Mathf.Abs(p.y - 4) < 1.5f && Mathf.Abs(p.x) < 21.5f) ||
-                (Mathf.Abs(p.y - 16) < 1 && Mathf.Abs(p.x) < 18) ||
-                (Mathf.Abs(p.x - 15) < 1 && p.y > -11 && p.y < 17))
-                return new Color(.65f,.53f,.35f);
-            return new Color(.27f,.45f,.34f);
+            if (ForestFortAsset.IsWallOnMap(p)) return new Color(.65f,.65f,.7f);
+            return OldForestLandscape.MapColor(p);
         }
         void Save()
         {
