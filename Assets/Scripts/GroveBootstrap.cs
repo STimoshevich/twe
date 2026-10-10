@@ -34,14 +34,19 @@ namespace TwilightGrove
             var path = Mat(new Color(.46f, .39f, .30f));
             var wood = Mat(new Color(.29f, .20f, .18f));
             var leaves = Mat(new Color(.12f, .27f, .24f));
-            Piece("Ground", PrimitiveType.Cube, new Vector3(0, -.5f, 0), new Vector3(30, 1, 30), grass);
-            Piece("Path", PrimitiveType.Cube, new Vector3(0, .012f, 0), new Vector3(3, .02f, 28), path, false);
-            Piece("Crossing", PrimitiveType.Cube, new Vector3(0, .013f, 4), new Vector3(23, .02f, 3), path, false);
+            Piece("Ground", PrimitiveType.Cube, new Vector3(0, -.5f, 0), new Vector3(46, 1, 46), grass);
+            Piece("Path", PrimitiveType.Cube, new Vector3(0, .012f, 0), new Vector3(3, .02f, 44), path, false);
+            Piece("Crossing", PrimitiveType.Cube, new Vector3(0, .013f, 4), new Vector3(43, .02f, 3), path, false);
+            Piece("Northern trail", PrimitiveType.Cube, new Vector3(0, .014f, 16), new Vector3(36, .02f, 2), path, false);
+            Piece("Eastern trail", PrimitiveType.Cube, new Vector3(15, .015f, 3), new Vector3(2, .02f, 28), path, false);
             // The boundary walls keep the controller on the small playable island.
-            Piece("North boundary", PrimitiveType.Cube, new Vector3(0, 1, 15), new Vector3(31, 2, 1), stone);
-            Piece("South boundary", PrimitiveType.Cube, new Vector3(0, 1, -15), new Vector3(31, 2, 1), stone);
-            Piece("East boundary", PrimitiveType.Cube, new Vector3(15, 1, 0), new Vector3(1, 2, 31), stone);
-            Piece("West boundary", PrimitiveType.Cube, new Vector3(-15, 1, 0), new Vector3(1, 2, 31), stone);
+            Piece("North boundary", PrimitiveType.Cube, new Vector3(0, 1, 23), new Vector3(47, 2, 1), stone);
+            Piece("South boundary", PrimitiveType.Cube, new Vector3(0, 1, -23), new Vector3(47, 2, 1), stone);
+            Piece("East boundary", PrimitiveType.Cube, new Vector3(23, 1, 0), new Vector3(1, 2, 47), stone);
+            Piece("West boundary", PrimitiveType.Cube, new Vector3(-23, 1, 0), new Vector3(1, 2, 47), stone);
+            Piece("Northern ruin wall", PrimitiveType.Cube, new Vector3(-14, 1, 19), new Vector3(8, 2, .6f), stone);
+            Piece("Northern ruin corner", PrimitiveType.Cube, new Vector3(-18, 1, 17), new Vector3(.6f, 2, 4), stone);
+            Piece("Eastern ledge", PrimitiveType.Cube, new Vector3(18, .12f, 16), new Vector3(4, .24f, 5), stone);
             Piece("Ruin wall", PrimitiveType.Cube, new Vector3(-6, 1, 6), new Vector3(6, 2, .6f), stone);
             Piece("Ruin corner", PrimitiveType.Cube, new Vector3(-9, 1, 3.5f), new Vector3(.6f, 2, 5), stone);
             Piece("Ruin pillar", PrimitiveType.Cube, new Vector3(-3, 1.5f, 3), new Vector3(.8f, 3, .8f), stone);
@@ -52,7 +57,9 @@ namespace TwilightGrove
             var glow = crystal.AddComponent<Light>();
             glow.color = Color.cyan; glow.range = 5; glow.intensity = 2;
             Vector2[] trees = { new Vector2(-11,-10), new Vector2(-7,-7), new Vector2(-10,-2),
-                new Vector2(7,-9), new Vector2(11,-5), new Vector2(10,10), new Vector2(-6,11), new Vector2(4,11) };
+                new Vector2(7,-9), new Vector2(11,-5), new Vector2(10,10), new Vector2(-6,11), new Vector2(4,11),
+                new Vector2(-19,-18), new Vector2(-14,-11), new Vector2(-20,-5), new Vector2(19,-16),
+                new Vector2(18,-5), new Vector2(20,8), new Vector2(10,20), new Vector2(-5,20), new Vector2(-20,12) };
             foreach (var t in trees)
             {
                 Piece("Tree trunk", PrimitiveType.Cylinder, new Vector3(t.x, 1, t.y), new Vector3(.7f, 1, .7f), wood);
@@ -82,11 +89,14 @@ namespace TwilightGrove
             follow.target = player.transform;
             motor.view = camera.transform;
             motor.joystick = gameObject.AddComponent<GroveJoystick>();
+            gameObject.AddComponent<GroveExploration>().Initialize(player.transform, glow);
+            gameObject.AddComponent<GroveQuest>().Initialize(player.transform, crystal.transform, glow);
         }
 
         public static Material Mat(Color color)
         {
-            var material = new Material(Shader.Find("Standard"));
+            var shader = Resources.Load<Shader>("GroveFog");
+            var material = new Material(shader != null ? shader : Shader.Find("Standard"));
             material.color = color;
             material.SetFloat("_Glossiness", .12f);
             return material;

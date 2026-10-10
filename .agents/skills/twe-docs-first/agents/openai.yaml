@@ -1,0 +1,6 @@
+interface:
+  display_name: "TWE: сначала документация"
+  short_description: "Обязательная сверка с Docs/Design перед работой"
+  default_prompt: "Используй $twe-docs-first: проверь документы TWE перед выполнением задачи и сохрани принятые решения."
+policy:
+  allow_implicit_invocation: true
